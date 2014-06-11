@@ -17,6 +17,9 @@ module Language.Mizar.Lexer
 
 import Prelude hiding (lex)
 
+-- TODO: scrap all this and replace it with the lexical syntax
+--       of izar
+
 }
 
 %wrapper "monad"
@@ -38,7 +41,7 @@ tokens :-
   \/                                    { lex' TokenDiv         }
   \(                                    { lex' TokenLParen      }
   \)                                    { lex' TokenRParen      }
-  
+
 {
 -- The token type:
 data Token

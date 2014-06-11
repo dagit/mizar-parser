@@ -1,44 +1,157 @@
+{-# LANGUAGE DeriveGeneric #-}
 module Language.Mizar where
 
--- This example comes straight from the happy documentation
+import GHC.Generics
 
-data Exp
-      = Let String Exp Exp
-      | Exp1 Exp1
-      deriving Show
+---- Articles
 
-data Exp1
-      = Plus Exp1 Term
-      | Minus Exp1 Term
-      | Term Term
-      deriving Show
+data Article = Article EnvironmentDeclaration TextProper
+  deriving (Read, Show, Eq, Ord, Generic)
 
-data Term
-      = Times Term Factor
-      | Div Term Factor
-      | Factor Factor
-      deriving Show
+---- Environments
 
-data Factor
-      = Int Int
-      | Var String
-      | Brack Exp
-      deriving Show
+type EnvironmentDeclaration = [Directive]
 
-eval :: [(String,Int)] -> Exp -> Int
-eval p (Let var e1 e2) = eval ((var, eval p e1): p) e2
-eval p (Exp1 e)        = evalExp1 p e
-  where
-  evalExp1 p' (Plus  e' t) = evalExp1 p' e' + evalTerm p' t
-  evalExp1 p' (Minus e' t) = evalExp1 p' e' + evalTerm p' t
-  evalExp1 p' (Term  t)    = evalTerm p' t
+data Directive
+  = DirectiveVocab [FilePath]
+  | DirectiveLib   LibraryDirective
+  | DirectiveReq   [FilePath]
+  deriving (Read, Show, Eq, Ord, Generic)
 
-  evalTerm p' (Times t f) = evalTerm p' t * evalFactor p' f
-  evalTerm p' (Div   t f) = evalTerm p' t `div` evalFactor p' f
-  evalTerm p' (Factor f)  = evalFactor p' f
+data LibraryDirective = LibraryDirective LibType [FilePath]
+  deriving (Read, Show, Eq, Ord, Generic)
 
-  evalFactor _  (Int i)    = i
-  evalFactor p' (Var s)    = case lookup s p' of
-                             Nothing -> error "free variable"
-                             Just i  -> i
-  evalFactor p' (Brack e') = eval p' e'
+data LibType
+  = Notations
+  | Constructors
+  | Registrations
+  | Definitions
+  | Expansions
+  | Equalities
+  | Theorems
+  | Schemes
+  deriving (Read, Show, Eq, Ord, Generic)
+
+---- Text Proper
+
+type TextProper = [Section]
+
+type Section = [TextItem]
+
+data TextItem
+  = TextItemReservation      Reservation
+  | TextItemDefinitionalItem -- DefinitionalItem
+  | TextItemRegistrationItem -- RegistrationItem
+  | TextItemNotationItem     -- NotationItem
+  | TextItemTheorem          -- Theorem
+  | TextItemSchemeItem       -- SchemeItem
+  | TextItemAuxiliaryItem    AuxiliaryItem
+  | TextItemCanceledTheorem  -- CanceledTheorem
+  deriving (Read, Show, Eq, Ord, Generic)
+
+data AuxiliaryItem
+  = AuxStatement Statement
+  | AuxPrivate   -- PrivateDefinition
+  deriving (Read, Show, Eq, Ord, Generic)
+
+data Statement
+  = StatementLinkable -- LinkableStatement
+  | StatementDiffuse  -- DiffuseStatement
+  deriving (Read, Show, Eq, Ord, Generic)
+
+type Reservation = [ReservationSegment]
+
+type Identifier = String
+type Symbol     = String
+
+data ReservationSegment
+  = ReservationSegment [Identifier] TypeExpression
+  deriving (Read, Show, Eq, Ord, Generic)
+
+data TypeExpression
+  = TypeExpression TypeExpression
+  | AdjCluster AdjectiveCluster TypeExpression
+  | RadType -- RadixType
+  deriving (Read, Show, Eq, Ord, Generic)
+
+type AdjectiveCluster = [Adjective]
+
+data Non = Non
+  deriving (Read, Show, Eq, Ord, Generic)
+
+data Adjective
+  = Adj (Maybe Non) (Maybe AdjectiveArguments) Symbol
+  deriving (Read, Show, Eq, Ord, Generic)
+
+type AdjectiveArguments = [[TermExpression]]
+
+data TermExpression
+  = TermExpression        TermExpression
+  | TermFuntorSymbol      [TermExpression] Symbol [TermExpression]
+  | TermBracket           LeftFunctorBracket [TermExpression] RightFunctorBracket
+  | TermFunctorIdentifier Identifier (Maybe [TermExpression])
+  | TermStructureSymbol   Symbol [TermExpression]
+  | TermVariable          Identifier
+  | TermPostqualification TermExpression (Maybe Postqualification) FormulaExpression
+  | TermSetOfAll          TermExpression (Maybe Postqualification)
+  | TermNumeral           Numeral
+  | TermQua               TermExpression TypeExpression
+  | TermTheOf             Symbol TermExpression
+  | TermTheSymbol         Symbol
+  | TermTheType           TypeExpression
+  | Term_                 Identifier TypeExpression
+  | TermPrivate           PrivateDefinitionParameter
+  | TermIt
+  deriving (Read, Show, Eq, Ord, Generic)
+
+type Numeral = Integer
+
+data LeftFunctorBracket
+  = LeftFunctorSym Symbol
+  | LeftFunctorCurelyBrace
+  | LeftFunctorSquareBrace
+  deriving (Read, Show, Eq, Ord, Generic)
+
+data RightFunctorBracket
+  = RightFunctorSym Symbol
+  | RightFunctorCurelyBrace
+  | RightFunctorSquareBrace
+  deriving (Read, Show, Eq, Ord, Generic)
+
+type Postqualification = [PostqualifyingSegment]
+
+data PostqualifyingSegment
+  = PS [Identifier] TypeExpression
+  deriving (Read, Show, Eq, Ord, Generic)
+
+type PrivateDefinitionParameter = Int
+
+data FormulaExpression
+  = FormulaExpression    FormulaExpression
+  | FormulaAtomic        AtomicFormulaExpression
+  | FormulaQuantified    QuantifiedFormulaExpression
+  | FormulaAnd           FormulaExpression FormulaExpression
+  | FormulaOr            FormulaExpression FormulaExpression
+  | FormulaImplies       FormulaExpression FormulaExpression
+  | FormulaIff           FormulaExpression FormulaExpression
+  | FormulaNot           FormulaExpression
+  | FormulaContradiction
+  | FormulaThesis
+  deriving (Read, Show, Eq, Ord, Generic)
+
+data AtomicFormulaExpression
+  = AtomicPredicateSymbol [TermExpression] Symbol [TermExpression] [(Symbol, [TermExpression])]
+  | AtomicIdentifier      Identifier [TermExpression]
+  | AtomicIsAdj           TermExpression [Adjective]
+  | AtomicIsType          TermExpression TypeExpression
+  deriving (Read, Show, Eq, Ord, Generic)
+
+data QuantifiedFormulaExpression
+  = QuantifiedFor [QuantifiedVariable] (Maybe FormulaExpression) FormulaExpression
+  | QuantifiedEx  [QuantifiedVariable] FormulaExpression
+  deriving (Read, Show, Eq, Ord, Generic)
+
+data QuantifiedVariable
+  = ImplicitlyQuantified Identifier
+  | ExplicitlyQuantified Identifier TypeExpression
+  deriving (Read, Show, Eq, Ord, Generic)

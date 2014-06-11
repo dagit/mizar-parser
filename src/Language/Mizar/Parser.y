@@ -34,21 +34,7 @@ import Language.Mizar.Lexer
 
 %%
 
-Exp   : let var '=' Exp in Exp  { Let $2 $4 $6 }
-      | Exp1                    { Exp1 $1 }
-
-Exp1  : Exp1 '+' Term           { Plus $1 $3 }
-      | Exp1 '-' Term           { Minus $1 $3 }
-      | Term                    { Term $1 }
-
-Term  : Term '*' Factor         { Times $1 $3 }
-      | Term '/' Factor         { Div $1 $3 }
-      | Factor                  { Factor $1 }
-
-Factor
-      : int                     { Int $1 }
-      | var                     { Var $1 }
-      | '(' Exp ')'             { Brack $2 }
+Article   :  { Article [] [] }
 
 {
 
@@ -82,10 +68,10 @@ happyError t = do
   (l,c) <- getPosn
   fail (show l ++ ":" ++ show c ++ ": Parse error on Token: " ++ show t ++ "\n")
 
-parseExp :: String -> Either String Exp
+parseExp :: String -> Either String Article
 parseExp s = runAlex s parse
 
-readExp :: FilePath -> IO (Either String Exp)
+readExp :: FilePath -> IO (Either String Article)
 readExp fp = do
   cs <- readFile fp
   return (parseExp cs)
